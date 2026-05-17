@@ -2,7 +2,7 @@
 
 Документация и практические гайды по **[Mihomo](https://github.com/MetaCubeX/mihomo)** (Clash Meta) **на русском языке** — и смежные темы: DNS, fake-ip, sniffer, правила, геоданные, связка с **nfqws2** / **XKeen** на роутерах вроде Keenetic.
 
-Это **неофициальное** собрание: сверяйтесь с [официальной вики Mihomo](https://wiki.metacubex.one/ru/config/) и релизами вашего ядра.
+Это **неофициальное** собрание: перекрёстно сверяйтесь с [вики Mihomo](https://wiki.metacubex.one/ru/config/) (по факту страницы **на английском и китайском**, полноценного русского нет — как раз поэтому здесь свой гайд) и с релизами вашего ядра.
 
 ---
 
@@ -30,7 +30,7 @@
 ## Полезные внешние ссылки
 
 - [Mihomo — репозиторий](https://github.com/MetaCubeX/mihomo)
-- [Конфигурация (вики, RU)](https://wiki.metacubex.one/ru/config/)
+- [Вики: конфигурация](https://wiki.metacubex.one/ru/config/) — официальный источник; разделы в основном **EN/ZH**, русская локаль в URL не означает полный перевод
 - [meta-rules-dat — геобазы под экосистему Meta](https://github.com/MetaCubeX/meta-rules-dat) · [релиз `latest`](https://github.com/MetaCubeX/meta-rules-dat/releases/tag/latest)
 
 ---
