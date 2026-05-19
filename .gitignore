@@ -1,0 +1,13 @@
+# Локальный клон официальной документации (MkDocs); не коммитить — см. docs/REFERENCE-META-DOCS.md
+Meta-Docs/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Кэш ядра Mihomo (локальный артефакт)
+mihomo/cache.db
+
+.DS_Store
+Thumbs.db

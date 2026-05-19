@@ -1,0 +1,7 @@
+located in Entware
+opt\etc\mihomo
+
+Файлы в этой папке (копия с роутера):
+- GeoSite.dat — списки GEOSITE; список тегов: python list_geosite_tags.py
+- geoip.metadb — GeoIP для Mihomo (читает ядро)
+- README-GEO.md — как смотреть базы и связка с config.yaml

@@ -1,0 +1,120 @@
+# =============================================================================
+# СЦЕНАРИЙ 01 — DNS: fake-ip, разные резолверы для разных сайтов, запасная цепочка
+#
+# ДЛЯ КОГО
+#   Вы уже включили Mihomo, но «не открывается сайт», «вечная загрузка», странно
+#   ведёт себя только часть доменов, или хотите понять, ЗАЧЕМ в dns: столько списков.
+#
+# ИДЕЯ В ДВУХ СЛОВАХ
+#   Приложение спрашивает IP у Mihomo. Mihomo сам ходит к DNS-серверам, которые вы
+#   задали, и по правилам маршрутизации потом отправляет трафик в DIRECT или в прокси.
+#   Режим fake-ip значит: клиенту часто отдаётся «временный» адрес из пула 198.18.x.x,
+#   а настоящий IP сайта узнаёт уже ядро — так проще строить правила по домену.
+#
+# ЧТО ЗДЕСЬ ПОКАЗАНО (сверху вниз по блоку dns:)
+#   default-nameserver — «разведка»: как получить IP самих DoH/DoT, чтобы потом к ним
+#                         подключиться (bootstrap). Не путать с обычным интернет-сёрфингом.
+#   nameserver         — основной список резолверов для имён из приложений/браузера.
+#   fallback           — запас, если основной список подвёл или сработал fallback-filter.
+#   nameserver-policy  — для доменов из указанных GEOSITE-тегов взять ДРУГОЙ резолвер
+#                         (например госсайты — через DNS внутри страны).
+#   proxy-server-nameserver — как резолвить имена ВАШИХ прокси-серверов (чтобы не
+#                         зациклиться на fake-ip при подключении к VPS).
+#   fake-ip-filter     — какие имена НЕ подменять fake-ip (LAN, служебные проверки ОС).
+#
+# ВАЖНО ПРО GEOSITE
+#   Теги вроде category-gov-ru должны ЕСТЬ в вашем GeoSite.dat. Список тегов смотрите
+#   скриптом mihomo/list_geosite_tags.py — см. mihomo/README-GEO.md и docs/ru/geo-xray-dat.md
+#
+# КАК ИСПОЛЬЗОВАТЬ ЭТОТ ФАЙЛ
+#   Не заменяйте им целиком рабочий config.yaml на роутере. Скопируйте блоки dns: и
+#   при необходимости sniffer: в свой файл, объединив с уже существующими rules: и
+#   proxy-groups:. Один корневой ключ dns: в файле — только один.
+#
+# КУДА ЧИТАТЬ ДАЛЬШЕ
+#   ../../GUIDE.md — разделы про DNS (hosts, dns:, схемы серверов) и Sniffer.
+# =============================================================================
+
+mixed-port: 10801
+allow-lan: true
+mode: rule
+log-level: info
+ipv6: false
+find-process-mode: off
+
+geodata-mode: false
+geodata-loader: memconservative
+geo-auto-update: true
+
+profile:
+  store-selected: true
+
+# --- Sniffer: подсказывает ядру «настоящий» домен по SNI/HTTP, когда клиент стучится
+#     по IP (часто связано с fake-ip). Без sniffer часть правил по DOMAIN может не сработать.
+#     Подробнее: ../../GUIDE.md#sec-sniffer
+sniffer:
+  enable: true
+  force-dns-mapping: true
+  parse-pure-ip: true
+  override-destination: true
+  sniff:
+    TLS:
+      ports: [443, 8443]
+    HTTP:
+      ports: [80, 8080-8880]
+    QUIC:
+      ports: [443]
+
+dns:
+  # enable + listen — поднимает DNS-сервер Mihomo (клиентам роутера можно указать этот IP:порт).
+  enable: true
+  listen: 0.0.0.0:1053
+  ipv6: false
+  # fake-ip: клиенту часто отдаётся адрес из fake-ip-range; реальный IP узнаёт ядро.
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  # Используются для получения IP самих DoH/DoT-серверов (bootstrap), не для обычных доменов приложений.
+  default-nameserver:
+    - tls://223.5.5.5
+    - 8.8.8.8
+  # Основной резолвинг клиентских имён.
+  nameserver:
+    - https://dns.google/dns-query
+    - https://1.1.1.1/dns-query
+  # Если nameserver не ответили / подозрение на отравление — fallback цепочка.
+  fallback:
+    - https://8.8.8.8/dns-query#h3=true
+    - tls://dns.quad9.net:853
+  # Если nameserver «подозрительны» (например ответ из неожиданной страны по geoip) — идём в fallback.
+  fallback-filter:
+    geoip: true
+    geoip-code: RU
+    ipcidr:
+      - 240.0.0.0/4
+  # Политика: для указанных geosite-тегов — другие резолверы (например «через локального провайдера»).
+  nameserver-policy:
+    "geosite:category-gov-ru":
+      - https://common.dot.dns.yandex.net/dns-query
+    "geosite:cn":
+      - https://dns.alidns.com/dns-query
+  # DNS для имён самих прокси-серверов (чтобы не зациклиться на fake-ip).
+  proxy-server-nameserver:
+    - https://1.1.1.1/dns-query
+  fake-ip-filter:
+    - "+.lan"
+    - "+.local"
+    - "+.msftconnecttest.com"
+    - "connectivitycheck.gstatic.com"
+
+proxy-groups:
+  # Заглушка: в бою сюда добавляют имя своего прокси из proxies: или use: с провайдером.
+  - name: PROXY
+    type: select
+    proxies:
+      - DIRECT
+
+proxies: []
+
+rules:
+  # Учебный минимум: весь трафик напрямую. В реальном конфиге выше будут GEOSITE/RULE-SET и т.д.
+  - MATCH,DIRECT

@@ -1,0 +1,84 @@
+# =============================================================================
+# СЦЕНАРИЙ 02 — TUN: виртуальный интерфейс и перехват DNS (часто ПК / сервер Linux)
+#
+# ДЛЯ КОГО
+#   Вы хотите, чтобы приложения «не знали про прокси», а весь трафик шёл через
+#   виртуальную сетевую карту, которую поднимает Mihomo (как у многих VPN-клиентов).
+#
+# ЧТО ТАКОЕ TUN (очень упрощённо)
+#   Это программный сетевой интерфейс. С ОС он выглядит как ещё один «LAN» / «VPN».
+#   Вместе с auto-route ядро может менять системную маршрутизацию, чтобы трафик
+#   попадал в Mihomo. Поэтому TUN на роутере и на ПК — разные последствия для сети.
+#
+# ЧТО ЗДЕСЬ ПОКАЗАНО
+#   tun: — включение, стек (system / gvisor / mixed), auto-route, dns-hijack
+#         (куда перехватывать DNS-запросы внутри туннеля — зависит от ОС).
+#   routing-mark — метка пакетов в Linux (fwmark) для связки с iptables/nftables;
+#                  на домашнем роутере может не понадобиться — уточняйте свою схему.
+#   dns: enhanced-mode: redir-host — пример другого режима DNS рядом с TUN (не единственный вариант).
+#
+# ВАЖНО — KEENETIC + XKEEN + NFQWS
+#   На роутере у вас уже может быть цепочка nftables → nfqws → tproxy в Mihomo.
+#   Включение TUN с auto-route: true часто ЛОМАЕТ или дублирует маршрут по умолчанию.
+#   Перед копированием этого файла на Keenetic прочитайте ../../GUIDE.md § TUN и § nfqws2.
+#   Типичная схема на Keenetic: tproxy/listeners + nfqws, БЕЗ «полного» TUN auto-route.
+#
+# КАК ИСПОЛЬЗОВАТЬ
+#   Скопируйте только блок tun: (и при необходимости dns:) в свой config, проверьте,
+#   что нет второго tun: и что mixed-port / listeners не конфликтуют по портам.
+#
+# КУДА ЧИТАТЬ
+#   ../../GUIDE.md#sec-tun — все поля и нюансы.
+# =============================================================================
+
+mixed-port: 10801
+allow-lan: true
+mode: rule
+log-level: info
+ipv6: false
+find-process-mode: off
+
+# Для Linux: помечает исходящий трафик Mihomo меткой (fwmark), чтобы в nftables/iptables
+# можно было отличить «его» пакеты. На роутере без своей разметки часто не нужен — можно удалить.
+routing-mark: 0x1face
+
+# TUN — виртуальный интерфейс. auto-route меняет системные маршруты: на Keenetic опасно без чтения гайда.
+tun:
+  enable: true
+  stack: mixed
+  # device: Mihomo
+  auto-route: true
+  auto-detect-interface: true
+  strict-route: false
+  mtu: 9000
+  # dns-hijack: перенаправить DNS-запросы в стек Mihomo (набор зависит от ОС; any:53 — частый шаблон).
+  dns-hijack:
+    - any:53
+    - tcp://any:53
+  # inet4_address: 198.19.0.1/30
+
+dns:
+  enable: true
+  listen: 0.0.0.0:1053
+  enhanced-mode: redir-host
+  nameserver:
+    - https://1.1.1.1/dns-query
+  default-nameserver:
+    - 8.8.8.8
+
+sniffer:
+  enable: true
+  force-dns-mapping: true
+  parse-pure-ip: true
+  override-destination: true
+
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies:
+      - DIRECT
+
+proxies: []
+
+rules:
+  - MATCH,DIRECT

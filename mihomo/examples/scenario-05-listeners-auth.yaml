@@ -1,0 +1,85 @@
+# =============================================================================
+# СЦЕНАРИЙ 05 — Входящие порты (listeners) и пароль для клиентов в LAN
+#
+# ДЛЯ КОГО
+#   Вы запускаете Mihomo на роутере или ПК и хотите, чтобы телефон/браузер подключались
+#   к Mihomo по SOCKS или HTTP на РАЗНЫХ портах, желательно с логином и паролем.
+#
+# LISTENERS VS mixed-port
+#   В корне config часто задают один mixed-port — это «простой» входящий порт.
+#   Секция listeners: даёт несколько именованных входов (разные порты, типы, bind).
+#   Оба мира не должны занять ОДИН И ТОТ ЖЕ порт — следите за числами.
+#
+# ТИПЫ В ЭТОМ ПРИМЕРЕ
+#   mixed — на одном порту и HTTP-прокси, и SOCKS5 (удобно для браузера и приложений).
+#   socks — «чистый» SOCKS5.
+#   http  — классический HTTP-прокси (старые программы, curl --proxy).
+#
+# AUTHENTICATION (глобально)
+#   Список строк "логин:пароль" для входящих прокси (не путать с secret у REST API
+#   external-controller — это другой механизм, см. ../../docs/ru/web-ui.md).
+#   skip-auth-prefixes — сети, где пароль не спрашивается (часто localhost).
+#
+# LAN-allowed-ips / bind-address
+#   Управляют, с каких адресов слушать и кого пускать; 0.0.0.0/0 в примере — «все»;
+#   в бою обычно сужают до своей подсети.
+#
+# RULES ЗДЕСЬ
+#   Локальная сеть в DIRECT, остальное в PROXY — шаблон; подставьте свою группу и узлы.
+#
+# КУДА ЧИТАТЬ
+#   ../../GUIDE.md#sec-listeners (общие поля, ss-config и т.д.)
+# =============================================================================
+
+mixed-port: 10801
+allow-lan: true
+bind-address: "*"
+mode: rule
+log-level: info
+ipv6: false
+find-process-mode: off
+
+# Логин/пароль для входящих SOCKS/HTTP/Mixed (клиент в браузере вводит как для прокси).
+# Не путать с secret: у external-controller — тот ключ для REST API панелей.
+authentication:
+  - "user1:password1"
+
+skip-auth-prefixes:
+  - 127.0.0.1/8
+
+lan-allowed-ips:
+  - 0.0.0.0/0
+  - ::/0
+
+listeners:
+  # Основной mixed: HTTP + SOCKS на одном порту (альтернатива только mixed-port).
+  - name: mixed-lan
+    type: mixed
+    port: 10808
+    listen: 0.0.0.0
+    udp: true
+
+  # Отдельный SOCKS только для приложений, которым нужен чистый SOCKS5.
+  - name: socks-only
+    type: socks
+    port: 10809
+    listen: 0.0.0.0
+    udp: true
+
+  # HTTP-прокси (старые клиенты / curl --proxy).
+  - name: http-in
+    type: http
+    port: 10810
+    listen: 0.0.0.0
+
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies:
+      - DIRECT
+
+proxies: []
+
+rules:
+  - IP-CIDR,192.168.0.0/16,DIRECT
+  - MATCH,PROXY

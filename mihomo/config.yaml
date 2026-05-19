@@ -1,0 +1,134 @@
+# =============================================================================
+# Mihomo — публикуемый пример конфигурации (без личных узлов и секретов)
+# =============================================================================
+# Локальное руководство (правила, DNS, sniffer, типичные ошибки):
+#   ../GUIDE.md
+# Официальная вики:
+#   https://wiki.metacubex.one/ru/config/
+# Geo-файлы, meta-rules-dat, antifilter.download:
+#   ../mihomo/README-GEO.md
+# Подробно по типам исходящих proxies:
+#   ../docs/ru/proxies.md
+# Дополнительные сценарии (YAML с комментариями для новичков):
+#   ../mihomo/examples/README.md
+# Xray opt/etc/xray/dat — симлинки GeoSite/GeoIP и geodata-mode:
+#   ../docs/ru/geo-xray-dat.md
+#
+# Геоданные (GeoSite.dat, geoip.metadb) в папке mihomo/ рядом с этим примером в git:
+#   это только снимки для гайда и скриптов; версия может отставать от «боевой».
+# Свежие файлы: https://github.com/MetaCubeX/meta-rules-dat/releases/tag/latest
+#   (wget/curl в каталог -d на роутере) или оставьте geo-auto-update ниже — ядро само
+#   обновит базы по geox-url в каталоге данных Mihomo (-d).
+# =============================================================================
+
+tproxy-port: 1181
+redir-port: 1182
+mixed-port: 10801
+allow-lan: true
+mode: rule
+log-level: info
+ipv6: false
+
+# GUIDE.md § «Энергосбережение и подбор процессов» — на роутере клиенты за NAT, матчинг процессов бесполезен.
+find-process-mode: off
+
+# --- Geo: см. ../mihomo/README-GEO.md и https://wiki.metacubex.one/ru/config/general/ ---
+# false = GeoIP из metadb/mmdb (рекомендуется с geoip.metadb из meta-rules-dat).
+# true  = GeoIP из GeoIP.dat (protobuf v2ray), тогда нужен файл GeoIP.dat рядом с -d.
+geodata-mode: false
+geodata-loader: memconservative
+
+# true — ядро периодически качает базы по geox-url (релиз latest у MetaCubeX).
+# false — только ручное обновление файлов в каталоге Mihomo (удобно при кастомных симлинках).
+geo-auto-update: true
+geo-update-interval: 24
+
+# URL по умолчанию в ядре уже смотрят на MetaCubeX/meta-rules-dat; блок ниже — явная
+# копия для друзей/репозитория (можно удалить, если устраивают дефолты).
+geox-url:
+  geoip: "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.dat"
+  geosite: "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geosite.dat"
+  mmdb: "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.metadb"
+  asn: "https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/GeoLite2-ASN.mmdb"
+
+profile:
+  store-selected: true
+
+sniffer:
+  enable: true
+  # GUIDE.md § Sniffer — для fake-ip обычно включают все три:
+  force-dns-mapping: true
+  parse-pure-ip: true
+  override-destination: true
+  sniff:
+    TLS:
+      ports: [443, 8443]
+    HTTP:
+      ports: [80, 8080-8880]
+      override-destination: true
+    QUIC:
+      ports: [443]
+
+dns:
+  enable: true
+  ipv6: false
+  listen: 0.0.0.0:1053
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  default-nameserver:
+    - 77.88.8.8
+    - 8.8.8.8
+  nameserver:
+    - https://dns.google/dns-query
+    - https://1.1.1.1/dns-query
+  nameserver-policy:
+    "geosite:category-gov-ru":
+      - https://common.dot.dns.yandex.net/dns-query
+    "geosite:category-media-ru":
+      - https://common.dot.dns.yandex.net/dns-query
+  proxy-server-nameserver:
+    - https://1.1.1.1/dns-query
+  fake-ip-filter:
+    - "+.lan"
+    - "+.local"
+
+# -----------------------------------------------------------------------------
+# Внешние списки (antifilter) — подробности: ../mihomo/README-GEO.md
+# Список большой: на слабом роутере при нехватке RAM закомментируйте provider и RULE-SET ниже.
+# -----------------------------------------------------------------------------
+rule-providers:
+  antifilter-ip:
+    type: http
+    behavior: ipcidr
+    format: text
+    url: "https://antifilter.download/list/allyouneed.lst"
+    path: ./ruleset/antifilter-ip.txt
+    interval: 3600
+
+proxy-groups:
+  # Добавьте сюда имя своего прокси после заполнения блока proxies: (см. ../GUIDE.md#sec-vless)
+  - name: PROXY
+    type: select
+    proxies:
+      - DIRECT
+
+proxies: []
+# Вставьте сюда свой узел (VLESS/VMess/…). Пример структуры — ../GUIDE.md#sec-vless
+# После добавления прокси укажите его имя в proxy-groups -> PROXY -> proxies (выше).
+
+rules:
+  - DOMAIN-SUFFIX,local,DIRECT
+  - IP-CIDR,127.0.0.0/8,DIRECT
+  - IP-CIDR,10.0.0.0/8,DIRECT
+  - IP-CIDR,172.16.0.0/12,DIRECT
+  - IP-CIDR,192.168.0.0/16,DIRECT
+
+  # Российские госсайты/медиа и трафик внутри RU — напрямую (теги из вашего geosite.dat; проверка: list_geosite_tags.py в этой папке репозитория)
+  - GEOSITE,category-gov-ru,DIRECT
+  - GEOSITE,category-media-ru,DIRECT
+  - GEOIP,RU,DIRECT
+
+  # Трафик к адресам из внешнего списка — в группу PROXY (пока в группе только DIRECT = фактически напрямую).
+  - RULE-SET,antifilter-ip,PROXY
+
+  - MATCH,PROXY

@@ -1,0 +1,91 @@
+# =============================================================================
+# СЦЕНАРИЙ 04 — Подправила (sub-rules), туннели, время (NTP), experimental
+#
+# ДЛЯ КОГО
+#   У вас уже длинный rules: и хочется вынести куски логики «в функции», ИЛИ отдельный
+#   входящий порт (гостевая сеть) с другими правилами, ИЛИ проброс DNS через локальный порт.
+#
+# SUB-RULES — ПРОСТЫМ ЯЗЫКОМ
+#   Это именованные мини-списки правил (как подпрограммы). Глобальный rules: может
+#   отправить трафик «на проверку» в sub-rules через правило SUB-RULE,(условие),имя.
+#   У listener можно указать rule: имя — тогда трафик с ЭТОГО порта идёт по sub-rules,
+#   а не по общему rules: (удобно для гостевого SOCKS с жёстким фильтром).
+#
+# TUNNELS (туннели)
+#   Открывают локальный порт на машине с Mihomo и пересылают поток на target (IP:порт).
+#   В примере — локальный DNS-форвард на 8.8.8.8:53 без прокси (поле proxy не задано = DIRECT).
+#   Если нужно гнать через VPS — укажите proxy: имя_узла_или_группы (см. GUIDE § tunnels).
+#
+# NTP
+#   Синхронизация времени внутри процесса Mihomo. write-to-system: true трогает часы ОС
+#   и часто требует root — на роутере Entware обычно возможно; в примере false для безопасности.
+#
+# EXPERIMENTAL
+#   Низкоуровневые флаги (QUIC, ECN, IP4P). Меняйте только если понимаете симптом
+#   (рвётся QUIC, странности на старом ядре Linux). Для «просто завести прокси» оставьте как в примере.
+#
+# ПОРЯДОК В rules:
+#   SUB-RULE обрабатывается как переход в другой список; порядок строк в rules: важен.
+#
+# КУДА ЧИТАТЬ
+#   ../../GUIDE.md#sec-sub-rules ../../GUIDE.md#sec-tunnels ../../GUIDE.md#sec-ntp
+#   ../../GUIDE.md#sec-experimental
+# =============================================================================
+
+mixed-port: 10801
+allow-lan: true
+mode: rule
+log-level: info
+ipv6: false
+find-process-mode: off
+
+sub-rules:
+  # Имена (office_route, strict_tcp) — произвольные; по ним ссылаются rules: и listeners:.
+  office_route:
+    - DOMAIN-SUFFIX,corp.internal,DIRECT
+    - IP-CIDR,10.0.0.0/8,DIRECT
+    - MATCH,PROXY
+
+  strict_tcp:
+    - DOMAIN-KEYWORD,ads,REJECT
+    - MATCH,DIRECT
+
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies:
+      - DIRECT
+
+proxies: []
+
+rules:
+  # SUB-RULE: если условие (NETWORK,tcp) выполнено — обработать по списку strict_tcp, иначе дальше по rules.
+  - SUB-RULE,(NETWORK,tcp),strict_tcp
+  - GEOSITE,google,PROXY
+  - MATCH,DIRECT
+
+listeners:
+  # Поле rule: — использовать sub-rules.office_route вместо глобального rules: для этого порта.
+  - name: socks-office
+    type: socks
+    port: 10890
+    listen: 127.0.0.1
+    rule: office_route
+
+# Форвардинг локального порта на внешний DNS; без proxy = DIRECT (см. вики).
+tunnels:
+  - network: [tcp, udp]
+    address: 127.0.0.1:6553
+    target: 8.8.8.8:53
+
+ntp:
+  enable: true
+  write-to-system: false
+  server: time.cloudflare.com
+  port: 123
+  interval: 30
+
+experimental:
+  quic-go-disable-gso: false
+  quic-go-disable-ecn: false
+  dialer-ip4p-convert: false

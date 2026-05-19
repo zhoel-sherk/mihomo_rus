@@ -1,0 +1,122 @@
+# =============================================================================
+# СЦЕНАРИЙ 03 — Подписки (proxy-providers) и «умные» группы узлов
+#
+# ДЛЯ КОГО
+#   У вас есть ссылка на подписку (Clash/Mihomo YAML) или свой файл со списком узлов,
+#   и вы не хотите вручную вставлять десятки прокси в proxies:.
+#
+# ИДЕЯ
+#   proxy-providers — это «источники узлов»: ядро скачивает или читает файл и само
+#   наполняет список прокси. В proxy-groups вы ссылаетесь на провайдера через use:
+#   — тогда в группу попадают ВСЕ узлы из этого источника (имена узлов задаёт подписка).
+#
+# ТИПЫ ПРОВАЙДЕРОВ ЗДЕСЬ
+#   type: http   — скачать по URL (подставьте СВОЮ ссылку вместо example.com).
+#   type: file    — взять готовый YAML с диска (path относительно каталога -d).
+#   type: inline  — маленький список прямо в config (удобно для теста; пароли не в git).
+#
+# ТИПЫ ГРУПП (коротко)
+#   select       — вы сами выбираете узел в панели (ручной переключатель).
+#   url-test     — ядро периодически меряет задержку и само выбирает «быстрый» узел.
+#   fallback     — идёт по списку сверху вниз, пока узел жив (обрыв — следующий).
+#   load-balance — распределение нагрузки (стратегия зависит от версии ядра — сверяйте вики).
+#
+# HEALTH-CHECK
+#   Внутри провайдера health-check говорит ядру, как проверять «живость» узлов после
+#   загрузки (url, интервал). Это не то же самое, что url-test в группе, но задачи похожи.
+#
+# ЧТО ОБЯЗАТЕЛЬНО СДЕЛАТЬ ВАМ
+#   1) Заменить url: у airport на реальную подписку ИЛИ убрать этот провайдер.
+#   2) Создать ./providers/local.yaml на роутере, если используете type: file.
+#   3) В rules: в конце обычно MATCH,ИМЯ_ГРУППЫ — здесь MATCH,PROXY (группа PROXY выше).
+#
+# КУДА ЧИТАТЬ
+#   ../../GUIDE.md#sec-proxy-providers и ../../GUIDE.md#sec-proxy-groups
+#   Типы узлов в подписке: ../../docs/ru/proxies.md
+# =============================================================================
+
+mixed-port: 10801
+allow-lan: true
+mode: rule
+log-level: info
+ipv6: false
+find-process-mode: off
+
+geodata-mode: false
+geo-auto-update: true
+
+proxy-providers:
+  # Имя ключа (airport) — ваш идентификатор; на него ссылаются в proxy-groups через use:.
+  airport:
+    type: http
+    url: "https://example.com/subscription.yaml"
+    path: ./providers/airport.yaml
+    interval: 3600
+    health-check:
+      enable: true
+      url: http://www.gstatic.com/generate_204
+      interval: 600
+      lazy: true
+  # Локальный статичный файл (удобно для отладки).
+  local_nodes:
+    type: file
+    path: ./providers/local.yaml
+    health-check:
+      enable: true
+      url: http://www.gstatic.com/generate_204
+      interval: 300
+  # Inline — малый список без внешнего файла.
+  inline_seed:
+    type: inline
+    payload:
+      - name: PLACEHOLDER-ss
+        type: ss
+        server: 127.0.0.1
+        port: 8388
+        cipher: aes-128-gcm
+        password: "CHANGE_ME"
+
+proxy-groups:
+  # use: — «подтянуть все прокси из указанных провайдеров» + ручной список proxies: (здесь DIRECT).
+  - name: PROXY
+    type: select
+    use:
+      - airport
+      - local_nodes
+      - inline_seed
+    proxies:
+      - DIRECT
+
+  - name: AUTO
+    type: url-test
+    use:
+      - airport
+    proxies:
+      - DIRECT
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 50
+    lazy: true
+
+  - name: FALLBACK-CHAIN
+    type: fallback
+    use:
+      - airport
+    proxies:
+      - DIRECT
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+
+  # load-balance — распределение по стратегии; уточняйте по вики вашей версии ядра.
+  - name: SPREAD
+    type: load-balance
+    use:
+      - airport
+    strategy: consistent-hashing
+    proxies:
+      - DIRECT
+
+proxies: []
+
+rules:
+  - MATCH,PROXY
