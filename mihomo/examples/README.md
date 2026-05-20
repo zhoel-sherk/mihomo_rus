@@ -55,6 +55,10 @@
 | [scenario-03-proxy-providers-url-test.yaml](scenario-03-proxy-providers-url-test.yaml) | Есть **ссылка на подписку** или свой файл со списком узлов | `proxy-providers` (http / file / inline), группы **`url-test`**, **`fallback`**, **`load-balance`**, healthcheck |
 | [scenario-04-sub-rules-tunnels-ntp.yaml](scenario-04-sub-rules-tunnels-ntp.yaml) | Хотите **разгрузить** длинный `rules:` или отдельную логику на порт / туннель | `sub-rules:`, вызов **`SUB-RULE`**, `listeners` с полем **`rule:`**, **`tunnels:`**, **`ntp:`**, **`experimental:`** |
 | [scenario-05-listeners-auth.yaml](scenario-05-listeners-auth.yaml) | Нужно **несколько входящих портов** и пароль для LAN | Несколько **`listeners:`**, глобальные **`authentication`** / **`skip-auth-prefixes`** |
+| [scenario-06-zkeenip-rulesets.yaml](scenario-06-zkeenip-rulesets.yaml) | Нужны **готовые .mrs** с IP CDN/хостингов (zkeen-ip) под `RULE-SET` | Якорь YAML, `rule-providers` (ipcidr + releases URL), пример `rules:` — полный каталог в [zkeenip-rulesets](https://github.com/zxc-rv/zkeenip-rulesets) |
+| [scenario-07-ad-filter-mrs.yaml](scenario-07-ad-filter-mrs.yaml) | **Реклама**: один доменный список в `.mrs` (Hagezi Pro) | `adlist` + `RULE-SET,adlist,REJECT` — см. [ad-filter](https://github.com/zxc-rv/ad-filter) |
+
+**Сторонние rule-set** (не часть ядра Mihomo): полный список URL и имён провайдеров всегда сверяйте с README upstream-репозитория; файлы в `examples/` — укороченные шаблоны.
 
 ---
 

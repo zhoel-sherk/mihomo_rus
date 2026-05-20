@@ -1,0 +1,51 @@
+# =============================================================================
+# СЦЕНАРИЙ 06 — Внешние rule-providers: zkeenip-rulesets (.mrs, ipcidr)
+#
+# ИСТОЧНИК
+#   https://github.com/zxc-rv/zkeenip-rulesets — готовые .mrs из проекта zkeen-ip
+#   (JamesZero). Полный список имён и URL — в README upstream.
+#
+# ИДЕЯ
+#   Тяжёлые списки IP CDN/хостингов не держать в rules: построчно, а подключать
+#   как HTTP rule-provider с format: mrs и behavior: ipcidr, затем RULE-SET в rules:.
+#
+# КАК ИСПОЛЬЗОВАТЬ
+#   Скопируйте anchors + rule-providers + нужные строки rules: в свой config.yaml.
+#   Замените PROXY на имя вашей proxy-group. Добавьте остальные провайдеры из README
+#   репозитория по тому же шаблону.
+#
+# КУДА ЧИТАТЬ
+#   ../../GUIDE.md#sec-rule-set-repos — § про сторонние rule-set.
+# =============================================================================
+
+# Якорь — как в upstream README: один раз описываем общие поля для всех .mrs ipcidr.
+anchors:
+  zkeenip-ipcidr: &zkeenip-ipcidr
+    type: http
+    format: mrs
+    behavior: ipcidr
+    interval: 86400
+
+rule-providers:
+  # Примеры (неполный список): остальные — см. zkeenip-rulesets README
+  cloudflare@ipcidr:
+    <<: *zkeenip-ipcidr
+    url: https://github.com/zxc-rv/zkeenip-rulesets/releases/latest/download/cloudflare@ipcidr.mrs
+    path: ./rule-providers/cloudflare@ipcidr.mrs
+  google@ipcidr:
+    <<: *zkeenip-ipcidr
+    url: https://github.com/zxc-rv/zkeenip-rulesets/releases/latest/download/google@ipcidr.mrs
+    path: ./rule-providers/google@ipcidr.mrs
+  youtube@ipcidr:
+    <<: *zkeenip-ipcidr
+    url: https://github.com/zxc-rv/zkeenip-rulesets/releases/latest/download/youtube@ipcidr.mrs
+    path: ./rule-providers/youtube@ipcidr.mrs
+
+# В реальном конфиге выше должны быть proxies / proxy-groups. Здесь — только фрагмент rules:.
+# Подставьте вместо PROXY имя своей группы (например AUTO или PROXY-GROUP).
+rules:
+  - RULE-SET,cloudflare@ipcidr,PROXY
+  - RULE-SET,google@ipcidr,PROXY
+  - RULE-SET,youtube@ipcidr,PROXY
+  # … остальные RULE-SET из upstream по необходимости
+  - MATCH,DIRECT

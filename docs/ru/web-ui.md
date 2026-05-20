@@ -54,6 +54,24 @@ Mihomo поднимает **HTTP API** (по умолчанию `127.0.0.1:9090`
 
 ---
 
+## [sign-craze](https://github.com/kittylabassistant/sign-craze)
+
+Отдельная **Go-утилита** для Keenetic + Entware: управление **iptables/ipset**, установка и переключение ядер **sing-box**, **xray** и **mihomo**, опционально **nfqws2** для DPI. Это **не** встроенный `external-ui` Mihomo и **не** панель только к Clash API.
+
+По README проекта при включённом Web UI слушаются (только из LAN, детали — upstream):
+
+| Порт | Назначение (по документации sign-craze) |
+|------|----------------------------------------|
+| **9090** | Zashboard (дашборд) |
+| **9091** | admin API |
+| **9092** | Routing Editor (inbound/outbound/rules для активного ядра) |
+
+**Конфликт с Mihomo:** у Mihomo типичный **`external-controller`** — это тоже HTTP API, часто на **`0.0.0.0:9090`** (и путь `/ui/` для статики). Если на одном хосте одновременно работают **sign-craze (Zashboard на 9090)** и **Mihomo с тем же портом**, один из сервисов не поднимется или «перехватит» порт. Имеет смысл заранее развести порты: например, сменить **`external-controller`** в `config.yaml` Mihomo на другой (например **9093**), либо следовать рекомендациям sign-craze по смене портов UI — сверяйте актуальный README и wiki.
+
+Если вы используете **XKeen / XKeen-UI** параллельно со **sign-craze**, не смешивайте понятия: у каждого свой способ установки ядер и своих веб-портов; итоговую схему лучше выстроить по одному «оркестратору» или явно разделить роли (см. [**interop-xkeen-nfqws-mihomo.md**](interop-xkeen-nfqws-mihomo.md)).
+
+---
+
 ## Сравнение коротко
 
 | Проект | К чему подключается | Типичный сценарий |
@@ -61,6 +79,7 @@ Mihomo поднимает **HTTP API** (по умолчанию `127.0.0.1:9090`
 | **XKeen-UI** | XKeen на Keenetic | Установка, сценарии, связка с Mihomo/nfqws — см. README проекта |
 | **Yacd-meta** | REST Mihomo | Универсальная лёгкая панель |
 | **metacubexd** | REST Mihomo | Рекомендуемая панель Meta, близка к актуальным фичам ядра |
+| **sign-craze** | sing-box / xray / mihomo + свой UI на Keenetic | Файрвол, DPI (nfqws2), переключение ядра; **проверьте порты 9090–9092 vs `external-controller`** |
 
 ---
 
@@ -68,3 +87,4 @@ Mihomo поднимает **HTTP API** (по умолчанию `127.0.0.1:9090`
 
 - [Mihomo — репозиторий](https://github.com/MetaCubeX/mihomo)
 - [Конфигурация (вики)](https://wiki.metacubex.one/ru/config/) — страницы на EN/ZH; детали полей сверяйте с локальным [Meta-Docs](https://github.com/MetaCubeX/Meta-Docs) ([инструкция клона](../REFERENCE-META-DOCS.md))
+- [sign-craze](https://github.com/kittylabassistant/sign-craze) — Keenetic, несколько ядер + Web UI (порты см. выше)

@@ -57,7 +57,7 @@ rules:
 9. [Общие поля исходящих `proxies:`](#sec-proxies-common)
 10. [Группы `proxy-groups:`](#sec-proxy-groups)
 11. [Протокол VLESS](#sec-vless)
-12. [Правила `rules:` и rule-set](#sec-rules) · [форматы rule-providers](#rule-provider-formats)
+12. [Правила `rules:` и rule-set](#sec-rules) · [форматы rule-providers](#rule-provider-formats) · [сторонние rule-set (репо)](#sec-rule-set-repos)
 13. [Провайдеры `proxy-providers:`](#sec-proxy-providers)
 14. [Подправила `sub-rules`](#sec-sub-rules)
 15. [Туннели `tunnels`](#sec-tunnels)
@@ -928,7 +928,7 @@ proxies:
 
 ### 8. Служебные селекторы (Rule-Sets, Sub-Rules, Match)
 
-*   `RULE-SET,antifilter,XKeen` — подключение внешних тяжелых списков правил (Rule-Providers). Позволяет не забивать основной конфиг миллионами строк, а читать их из внешнего файла.
+*   `RULE-SET,antifilter,XKeen` — подключение внешних тяжелых списков правил (Rule-Providers). Позволяет не забивать основной конфиг миллионами строк, а читать их из внешнего файла. Готовые каталоги **`.mrs`** (IP CDN, реклама и т.д.) — см. [§ 11 — сторонние rule-set](#sec-rule-set-repos) и репозитории [zkeenip-rulesets](https://github.com/zxc-rv/zkeenip-rulesets), [ad-filter](https://github.com/zxc-rv/ad-filter).
 *   `SUB-RULE,(NETWORK,tcp),sub-rule-name` — перенаправление трафика во вложенный изолированный под-список правил (`sub-rule`). Требует осторожного использования круглых скобок.
 *   `MATCH,DIRECT` — финальное безусловное правило. Ловит абсолютно весь трафик, который не подошел ни под одну строчку выше. Обязано находиться в самом низу блока `rules:`.
 
@@ -1005,6 +1005,19 @@ payload:
   - '10.0.0.1/32'                # Точечный одиночный IP-адрес конкретного сервера
   - '2001:db8::/32'              # Подсеть протокола IPv6
 ```
+
+<a id="sec-rule-set-repos"></a>
+
+### 11. Сторонние rule-set (репозитории сообщества)
+
+Ниже — **не** часть ядра Mihomo; это готовые **HTTP rule-providers** (часто формат **`.mrs`**) для подключения через `RULE-SET,...` в `rules:`.
+
+| Проект | Назначение |
+|--------|------------|
+| [**zkeenip-rulesets**](https://github.com/zxc-rv/zkeenip-rulesets) | IP-списки **zkeenip** ([jameszeroX/zkeen-ip](https://github.com/jameszeroX/zkeen-ip)) в виде **`.mrs`** под Mihomo: CDN/хостинг-площадки (`cloudflare@ipcidr`, `google@ipcidr`, …). В README — якорь YAML и примеры `RULE-SET`. |
+| [**ad-filter**](https://github.com/zxc-rv/ad-filter) | Доменные списки рекламы (база Hagezi Pro) в **`adlist.mrs`** для Mihomo + варианты для Xray/Sing-Box. Пример: `behavior: domain`, `format: mrs`, правило **`RULE-SET,adlist,REJECT`**. |
+
+Укороченные примеры вынесены в репозиторий: [`mihomo/examples/scenario-06-zkeenip-rulesets.yaml`](../../mihomo/examples/scenario-06-zkeenip-rulesets.yaml), [`mihomo/examples/scenario-07-ad-filter-mrs.yaml`](../../mihomo/examples/scenario-07-ad-filter-mrs.yaml). Полные списки имён провайдеров и URL — в upstream README.
 
 [↑ К оглавлению](#toc-top)
 
@@ -1218,7 +1231,7 @@ tunnels:
 
 ## Совместная работа Mihomo и nfqws2 (Keenetic / Linux)
 
-**nfqws2** (ветка **zapret**) работает на уровне **очереди netfilter (NFQUEUE)**: подмешивает/искажает пакеты так, чтобы обойти DPI у провайдера. **Mihomo** решает уже прикладную задачу — **куда отправить поток** (DIRECT, прокси, REJECT), часто после того как трафик попал в **tproxy/redir** или в **TUN**. Обе системы могут работать параллельно, если **не заставлять их бороться за одно и то же действие** (двойная подмена адреса/домена, двойной захват маршрута по умолчанию, лишний QUIC-туннель там, где его «ломает» только nfqws).
+**nfqws2** (ветка **zapret**) работает на уровне **очереди netfilter (NFQUEUE)**: подмешивает/искажает пакеты так, чтобы обойти DPI у провайдера. **Mihomo** решает уже прикладную задачу — **куда отправить поток** (DIRECT, прокси, REJECT), часто после того как трафик попал в **tproxy/redir** или в **TUN**. Обе системы могут работать параллельно, если **не заставлять их бороться за одно и то же действие** (двойная подмена адреса/домена, двойной захват маршрута по умолчанию, лишний QUIC-туннель там, где его «ломает» только nfqws). Подробная **матрица ролей и конфликтов** с XKeen и XKeen-UI — отдельный документ: [**docs/ru/interop-xkeen-nfqws-mihomo.md**](docs/ru/interop-xkeen-nfqws-mihomo.md).
 
 ### 1. Разделение ролей
 

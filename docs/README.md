@@ -8,5 +8,6 @@
 | [**ru/geo-xray-dat.md**](ru/geo-xray-dat.md) | Каталог **`opt/etc/xray/dat`** (Xray), симлинки `GeoSite.dat` / `GeoIP.dat` в Mihomo, `geodata-mode`, отличие `geoip.metadb` от набора Xray. |
 | [**ru/proxies.md**](ru/proxies.md) | Единый справочник по блоку **`proxies:`**: общие поля, TLS, транспорт, типы исходящих узлов. |
 | [**ru/web-ui.md**](ru/web-ui.md) | Веб-панели: REST API Mihomo, **XKeen-UI**, **Yacd-meta**, **metacubexd**. |
+| [**ru/interop-xkeen-nfqws-mihomo.md**](ru/interop-xkeen-nfqws-mihomo.md) | Совместимость **XKeen**, **XKeen-UI**, **nfqws2-keenetic**, **Mihomo** и **sign-craze**: netfilter, DNS, геоданные, типичные конфликты, порты UI. |
 
 Наверх по репозиторию: [**README.md**](../README.md).
