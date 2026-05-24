@@ -79,6 +79,9 @@ flowchart LR
 | [![](https://img.shields.io/badge/Mihomo-github-181717?logo=github)](https://github.com/MetaCubeX/mihomo) | Исходники ядра и релизы |
 | [![](https://img.shields.io/badge/Wiki-EN/ZH-2ea44f)](https://wiki.metacubex.one/ru/config/) | Официальная документация (русской нет) |
 | [![](https://img.shields.io/badge/meta--rules--dat-latest-blue)](https://github.com/MetaCubeX/meta-rules-dat/releases/tag/latest) | Геобазы для Mihomo |
+| [![](https://img.shields.io/badge/XKeen-keenetic-ff6b35?logo=go)](https://github.com/Corvus-Malus/XKeen) | Обвязка Mihomo для Keenetic |
+| [![](https://img.shields.io/badge/XKeen--UI-web-8b5cf6?logo=react)](https://github.com/zxc-rv/XKeen-UI) | Веб-интерфейс для XKeen |
+| [![](https://img.shields.io/badge/sign--craze-utility-f43f5e?logo=python)](https://github.com/kittylabassistant/sign-craze) | Автоматизация подписей в XKeen |
 
 ---
 
